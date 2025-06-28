@@ -6,218 +6,176 @@ class InventoryScreen extends StatelessWidget {
   const InventoryScreen({super.key});
 
   void _showAddProductDialog(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController priceController = TextEditingController();
-    final TextEditingController costController = TextEditingController();
-    final TextEditingController stockController = TextEditingController();
-    String? errorMessage;
+    final nameController = TextEditingController();
+    final priceController = TextEditingController();
+    final costController = TextEditingController();
+    final stockController = TextEditingController();
+    String localErrorMessage = '';
 
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        bool isLoading = false;
-        print('Opening Add Product dialog at ${DateTime.now()}');
-        return StatefulBuilder(
-          builder: (dialogContext, setState) {
-            return AlertDialog(
-              title: const Text('Add New Product'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Product Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Selling Price (Tsh)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: costController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Cost Price (Tsh)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: stockController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Initial Stock',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    if (errorMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                      ),
-                    ],
-                  ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: const Text('Add New Product'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Product Name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    print('Cancel button pressed at ${DateTime.now()}');
-                    if (dialogContext.mounted) {
-                      Navigator.pop(dialogContext);
-                    }
-                  },
-                  child: const Text('Cancel'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Selling Price (Tsh)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                    print('Add button pressed at ${DateTime.now()}');
-                    setState(() {
-                      isLoading = true;
-                      errorMessage = null;
-                    });
-
-                    final name = nameController.text.trim();
-                    final price = double.tryParse(priceController.text.trim());
-                    final cost = double.tryParse(costController.text.trim());
-                    final stock = int.tryParse(stockController.text.trim());
-
-                    if (name.isEmpty ||
-                        price == null ||
-                        cost == null ||
-                        stock == null ||
-                        price <= 0 ||
-                        cost <= 0 ||
-                        stock < 0) {
-                      setState(() {
-                        isLoading = false;
-                        errorMessage = 'Please fill in all fields with valid values.';
-                      });
-                      print('Validation failed: $errorMessage at ${DateTime.now()}');
-                      return;
-                    }
-
-                    try {
-                      await Provider.of<SalesProvider>(context, listen: false)
-                          .addProduct(context, name, price, cost, stock);
-                      if (dialogContext.mounted) {
-                        print('Product added, closing dialog at ${DateTime.now()}');
-                        Navigator.pop(dialogContext);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Product added successfully')),
-                        );
-                      } else {
-                        print('Dialog context not mounted after addProduct at ${DateTime.now()}');
-                      }
-                    } catch (e) {
-                      if (dialogContext.mounted) {
-                        setState(() {
-                          isLoading = false;
-                          errorMessage = e.toString().replaceFirst('Exception: ', '');
-                        });
-                        print('Error adding product in InventoryScreen: $e at ${DateTime.now()}');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(
-                                  'Failed to add product: ${e.toString().replaceFirst('Exception: ', '')}')),
-                        );
-                        if (e.toString().contains('Session expired')) {
-                          Navigator.pushReplacementNamed(context, '/login');
-                        }
-                      } else {
-                        print('Dialog context not mounted on error: $e at ${DateTime.now()}');
-                      }
-                    } finally {
-                      // Dispose controllers only after all operations
-                      nameController.dispose();
-                      priceController.dispose();
-                      costController.dispose();
-                      stockController.dispose();
-                    }
-                  },
-                  child: const Text('Add'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: costController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Cost Price (Tsh)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: stockController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Initial Stock',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                if (localErrorMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      localErrorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  ),
+                Selector<SalesProvider, String>(
+                  selector: (_, provider) => provider.errorMessage,
+                  builder: (_, errorMessage, __) => errorMessage.isNotEmpty
+                      ? Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  )
+                      : const SizedBox.shrink(),
                 ),
               ],
-            );
-          },
-        );
-      },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            Selector<SalesProvider, bool>(
+              selector: (_, provider) => provider.isLoading,
+              builder: (_, isLoading, __) => TextButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                  final name = nameController.text.trim();
+                  final price = double.tryParse(priceController.text.trim());
+                  final cost = double.tryParse(costController.text.trim());
+                  final stock = int.tryParse(stockController.text.trim());
+
+                  if (name.isEmpty || price == null || cost == null || stock == null || price <= 0 || cost <= 0 || stock < 0) {
+                    setState(() {
+                      localErrorMessage = 'Please fill in all fields with valid values.';
+                    });
+                    return;
+                  }
+
+                  try {
+                    await Provider.of<SalesProvider>(context, listen: false).addProduct(context, name, price, cost, stock);
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Product added successfully')),
+                    );
+                  } catch (e) {
+                    setState(() {
+                      localErrorMessage = e.toString().replaceFirst('Exception: ', '');
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to add product: $localErrorMessage')),
+                    );
+                    if (e.toString().contains('Session expired')) {
+                      Navigator.pushReplacementNamed(context, '/login');
+                    }
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ),
+          ],
+        ),
+      ),
     ).whenComplete(() {
-      print('Add Product dialog closed at ${DateTime.now()}');
+      nameController.dispose();
+      priceController.dispose();
+      costController.dispose();
+      stockController.dispose();
     });
   }
 
   void _showDeleteConfirmationDialog(BuildContext context, String productName) {
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        print('Opening Delete Confirmation dialog for $productName at ${DateTime.now()}');
-        return AlertDialog(
-          title: const Text('Delete Product'),
-          content: Text('Are you sure you want to delete "$productName"? This will also remove all associated sales records.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                print('Cancel delete dialog at ${DateTime.now()}');
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to delete "$productName"? This will also remove all associated sales records.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          Selector<SalesProvider, bool>(
+            selector: (_, provider) => provider.isLoading,
+            builder: (_, isLoading, __) => TextButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
                 try {
                   await Provider.of<SalesProvider>(context, listen: false).deleteProduct(context, productName);
-                  if (dialogContext.mounted) {
-                    print('Product deleted, closing dialog at ${DateTime.now()}');
-                    Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Product deleted successfully')),
-                    );
-                  } else {
-                    print('Dialog context not mounted after deleteProduct at ${DateTime.now()}');
-                  }
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Product deleted successfully')),
+                  );
                 } catch (e) {
-                  if (dialogContext.mounted) {
-                    print('Error in delete dialog: $e at ${DateTime.now()}');
-                    Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to delete product: ${e.toString().replaceFirst('Exception: ', '')}')),
-                    );
-                    if (e.toString().contains('Session expired')) {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    }
-                  } else {
-                    print('Dialog context not mounted on delete error: $e at ${DateTime.now()}');
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete product: ${e.toString().replaceFirst('Exception: ', '')}')),
+                  );
+                  if (e.toString().contains('Session expired')) {
+                    Navigator.pushReplacementNamed(context, '/login');
                   }
                 }
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      print('Delete dialog closed at ${DateTime.now()}');
-    });
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    print('InventoryScreen build at ${DateTime.now()}');
     return Scaffold(
       backgroundColor: const Color(0xFF26A69A),
       appBar: AppBar(
@@ -247,10 +205,14 @@ class InventoryScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Consumer<SalesProvider>(
-                builder: (context, salesProvider, child) {
-                  print('Consumer rebuild at ${DateTime.now()}, products: ${salesProvider.products.length}');
-                  return salesProvider.products.isEmpty
+              Selector<SalesProvider, bool>(
+                selector: (_, provider) => provider.isLoading,
+                builder: (_, isLoading, child) => isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : child!,
+                child: Selector<SalesProvider, List<Map<String, dynamic>>>(
+                  selector: (_, provider) => provider.products,
+                  builder: (_, products, __) => products.isEmpty
                       ? const Center(
                     child: Text(
                       'No products in inventory. Add a product to get started!',
@@ -260,9 +222,9 @@ class InventoryScreen extends StatelessWidget {
                       : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: salesProvider.products.length,
+                    itemCount: products.length,
                     itemBuilder: (context, index) {
-                      final product = salesProvider.products[index];
+                      final product = products[index];
                       return Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(
@@ -284,26 +246,44 @@ class InventoryScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _showDeleteConfirmationDialog(context, product['name']),
+                              Selector<SalesProvider, bool>(
+                                selector: (_, provider) => provider.isLoading,
+                                builder: (_, isLoading, __) => IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: isLoading ? null : () => _showDeleteConfirmationDialog(context, product['name']),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       );
                     },
-                  );
-                },
+                  ),
+                ),
+              ),
+              Selector<SalesProvider, String>(
+                selector: (_, provider) => provider.errorMessage,
+                builder: (_, errorMessage, __) => errorMessage.isNotEmpty
+                    ? Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                  ),
+                )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddProductDialog(context),
-        backgroundColor: const Color(0xFF26A69A),
-        child: const Icon(Icons.add),
+      floatingActionButton: Selector<SalesProvider, bool>(
+        selector: (_, provider) => provider.isLoading,
+        builder: (_, isLoading, __) => FloatingActionButton(
+          onPressed: isLoading ? null : () => _showAddProductDialog(context),
+          backgroundColor: const Color(0xFF26A69A),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

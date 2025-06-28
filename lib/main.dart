@@ -23,8 +23,12 @@ class SmartFinanceApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => AuthProvider()),
-        ChangeNotifierProvider(create: (context) => SalesProvider(Provider.of<AuthProvider>(context, listen: false))),
-        ChangeNotifierProvider(create: (context) => DebtorsProvider(Provider.of<AuthProvider>(context, listen: false)))
+        ChangeNotifierProvider(
+            create: (context) => SalesProvider(
+                Provider.of<AuthProvider>(context, listen: false))),
+        ChangeNotifierProvider(
+            create: (context) => DebtorsProvider(
+                Provider.of<AuthProvider>(context, listen: false)))
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -66,11 +70,13 @@ class AuthCheckScreen extends StatelessWidget {
           );
         }
         if (snapshot.hasData && snapshot.data == true) {
-          print('Authentication successful, loading user data at ${DateTime.now()}');
+          print(
+              'Authentication successful, loading user data at ${DateTime.now()}');
           salesProvider.loadUserData();
           return const MainScreen();
         }
-        print('Authentication failed or no data, showing login at ${DateTime.now()}');
+        print(
+            'Authentication failed or no data, showing login at ${DateTime.now()}');
         return const LoginScreen();
       },
     );

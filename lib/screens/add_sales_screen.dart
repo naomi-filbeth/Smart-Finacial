@@ -8,16 +8,21 @@ class AddSaleScreen extends StatefulWidget {
   final VoidCallback onSaleRecorded;
 
   @override
-  _AddSaleScreenState createState() => _AddSaleScreenState();
+  State<AddSaleScreen> createState() => _AddSaleScreenState();
 }
 
 class _AddSaleScreenState extends State<AddSaleScreen> {
+  String _selectedProduct = '';
   final TextEditingController _quantityController = TextEditingController();
-  String? _selectedProduct;
   DateTime _selectedDate = DateTime.now();
-  String? _errorMessage;
-  bool _isLoading = false;
+  String _localErrorMessage = '';
   DateTime? _lastSubmission;
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     try {
@@ -30,67 +35,60 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
       if (picked != null && picked != _selectedDate && mounted) {
         setState(() {
           _selectedDate = picked;
+          _localErrorMessage = '';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error selecting date: ${e.toString()}';
+          _localErrorMessage = 'Error selecting date: ${e.toString()}';
         });
       }
     }
   }
 
-  Future<void> _addSale() async {
-    // Debounce: Prevent submission if less than 1 second has passed
+  Future<void> _addSale(BuildContext context, SalesProvider provider) async {
     final now = DateTime.now();
     if (_lastSubmission != null && now.difference(_lastSubmission!).inMilliseconds < 1000) {
       return;
     }
     _lastSubmission = now;
 
-    if (_isLoading) return;
+    if (provider.isLoading) return;
 
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _localErrorMessage = '';
     });
 
     try {
       final quantityText = _quantityController.text.trim();
       final quantity = int.tryParse(quantityText);
 
-      if (_selectedProduct == null) {
+      if (_selectedProduct.isEmpty) {
         throw Exception('Please select a product.');
       }
       if (quantity == null || quantity <= 0) {
         throw Exception('Please enter a valid quantity greater than 0.');
       }
 
-      final salesProvider = Provider.of<SalesProvider>(context, listen: false);
-      final product = salesProvider.products.firstWhere(
+      final product = provider.products.firstWhere(
             (p) => p['name'] == _selectedProduct,
         orElse: () => throw Exception('Selected product not found in inventory.'),
       );
 
-      await Future.microtask(() {
-        return salesProvider.addSale(context, {
-          'product': _selectedProduct!,
-          'quantity': quantity,
-          'price': product['price'] as double,
-          'date': _selectedDate.toString().split(' ')[0],
-        });
+      await provider.addSale(context, {
+        'product': _selectedProduct,
+        'quantity': quantity,
+        'price': product['price'] as double,
+        'date': _selectedDate.toString().split(' ')[0],
       });
-
-      // Reload products to sync stock
-      await salesProvider.loadUserData();
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          _selectedProduct = null;
-          _quantityController.clear();
+          _selectedProduct = '';
+          _quantityController.text = '';
           _selectedDate = DateTime.now();
+          _localErrorMessage = '';
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Sale recorded successfully')),
@@ -100,12 +98,10 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _localErrorMessage = e.toString().replaceFirst('Exception: ', '');
         });
-        print('Error recording sale: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to record sale: $_errorMessage')),
+          SnackBar(content: Text('Failed to record sale: $_localErrorMessage')),
         );
         if (e.toString().contains('Session expired')) {
           Navigator.pushReplacementNamed(context, '/login');
@@ -115,173 +111,165 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
   }
 
   @override
-  void dispose() {
-    _quantityController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final salesProvider = Provider.of<SalesProvider>(context);
-    print('AddSaleScreen - Products: ${salesProvider.products}');
-
-    return Column(
-      children: [
-        if (_isLoading)
-          const LinearProgressIndicator(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    title: const Text(
-                      'Add Sale',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+    return Consumer<SalesProvider>(
+      builder: (context, provider, child) => Column(
+        children: [
+          if (provider.isLoading) const LinearProgressIndicator(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      title: const Text(
+                        'Add Sale',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'New Sale',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (salesProvider.products.isEmpty)
+                    Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             const Text(
-                              'No products available. Please add a product in the Inventory screen first.',
-                              style: TextStyle(color: Colors.red, fontSize: 14),
-                            )
-                          else
-                            DropdownButtonFormField<String>(
-                              value: _selectedProduct,
+                              'New Sale',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (provider.products.isEmpty)
+                              const Text(
+                                'No products available. Please add a product in the Inventory screen first.',
+                                style: TextStyle(color: Colors.red, fontSize: 14),
+                              )
+                            else
+                              DropdownButtonFormField<String>(
+                                value: _selectedProduct.isEmpty ? null : _selectedProduct,
+                                decoration: InputDecoration(
+                                  labelText: 'Product',
+                                  prefixIcon: const Icon(Icons.production_quantity_limits, color: Colors.grey),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                ),
+                                items: provider.products.map((product) {
+                                  return DropdownMenuItem<String>(
+                                    value: product['name'],
+                                    child: Text('${product['name']} (Stock: ${product['stock']})'),
+                                  );
+                                }).toList(),
+                                onChanged: provider.isLoading
+                                    ? null
+                                    : (value) {
+                                  setState(() {
+                                    _selectedProduct = value ?? '';
+                                    _localErrorMessage = '';
+                                  });
+                                },
+                                hint: const Text('Select a product'),
+                              ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: _quantityController,
+                              keyboardType: TextInputType.number,
+                              enabled: !provider.isLoading,
                               decoration: InputDecoration(
-                                labelText: 'Product',
-                                prefixIcon: const Icon(Icons.production_quantity_limits, color: Colors.grey),
+                                labelText: 'Quantity',
+                                prefixIcon: const Icon(Icons.numbers, color: Colors.grey),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 filled: true,
                                 fillColor: Colors.grey[100],
                               ),
-                              items: salesProvider.products.map((product) {
-                                return DropdownMenuItem<String>(
-                                  value: product['name'],
-                                  child: Text('${product['name']} (Stock: ${product['stock']})'),
-                                );
-                              }).toList(),
-                              onChanged: _isLoading
-                                  ? null
-                                  : (value) {
-                                if (mounted) {
-                                  setState(() {
-                                    _selectedProduct = value;
-                                    _errorMessage = null;
-                                  });
-                                }
-                              },
-                              hint: const Text('Select a product'),
-                            ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _quantityController,
-                            keyboardType: TextInputType.number,
-                            enabled: !_isLoading,
-                            decoration: InputDecoration(
-                              labelText: 'Quantity',
-                              prefixIcon: const Icon(Icons.numbers, color: Colors.grey),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[100],
-                            ),
-                            onChanged: (value) {
-                              if (mounted) {
+                              onChanged: (value) {
                                 setState(() {
-                                  _errorMessage = null;
+                                  _localErrorMessage = '';
                                 });
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Date: ${_selectedDate.toString().split(' ')[0]}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _isLoading ? null : () => _selectDate(context),
-                                child: const Text(
-                                  'Change',
-                                  style: TextStyle(color: Color(0xFF26A69A)),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (_errorMessage != null) ...[
+                              },
+                            ),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
-                                const Icon(Icons.error, color: Colors.red, size: 20),
+                                const Icon(Icons.calendar_today, color: Colors.grey),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                                    'Date: ${_selectedDate.toString().split(' ')[0]}',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: provider.isLoading ? null : () => _selectDate(context),
+                                  child: const Text(
+                                    'Change',
+                                    style: TextStyle(color: Color(0xFF26A69A)),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 16),
-                          ],
-                          ElevatedButton(
-                            onPressed: (salesProvider.products.isEmpty || _isLoading) ? null : _addSale,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF26A69A),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                            if (_localErrorMessage.isNotEmpty || provider.errorMessage.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  const Icon(Icons.error, color: Colors.red, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _localErrorMessage.isNotEmpty
+                                          ? _localErrorMessage
+                                          : provider.errorMessage,
+                                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                              const SizedBox(height: 16),
+                            ],
+                            ElevatedButton(
+                              onPressed: (provider.products.isEmpty || provider.isLoading)
+                                  ? null
+                                  : () => _addSale(context, provider),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF26A69A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                              ),
+                              child: const Text('Record Sale', style: TextStyle(fontSize: 16)),
                             ),
-                            child: const Text('Record Sale', style: TextStyle(fontSize: 16)),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

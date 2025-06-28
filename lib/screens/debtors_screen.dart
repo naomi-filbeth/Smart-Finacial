@@ -85,7 +85,8 @@ class DebtorsScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () async {
                     final name = nameController.text.trim();
-                    final balance = double.tryParse(balanceController.text.trim());
+                    final balance =
+                        double.tryParse(balanceController.text.trim());
                     final email = emailController.text.trim();
                     final phone = phoneController.text.trim();
                     final address = addressController.text.trim();
@@ -98,7 +99,8 @@ class DebtorsScreen extends StatelessWidget {
                     }
 
                     try {
-                      await Provider.of<DebtorsProvider>(context, listen: false).addDebtor(
+                      await Provider.of<DebtorsProvider>(context, listen: false)
+                          .addDebtor(
                         name,
                         balance,
                         email: email.isNotEmpty ? email : null,
@@ -107,11 +109,13 @@ class DebtorsScreen extends StatelessWidget {
                       );
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Debtor added successfully')),
+                        const SnackBar(
+                            content: Text('Debtor added successfully')),
                       );
                     } catch (e) {
                       setState(() {
-                        errorMessage = e.toString().replaceFirst('Exception: ', '');
+                        errorMessage =
+                            e.toString().replaceFirst('Exception: ', '');
                       });
                     }
                   },
@@ -125,11 +129,16 @@ class DebtorsScreen extends StatelessWidget {
     );
   }
 
-  void _showEditDebtorDialog(BuildContext context, Map<String, dynamic> debtor) {
-    final TextEditingController balanceController = TextEditingController(text: debtor['balance']?.toString() ?? '0.00');
-    final TextEditingController emailController = TextEditingController(text: debtor['email']?.toString() ?? '');
-    final TextEditingController phoneController = TextEditingController(text: debtor['phone']?.toString() ?? '');
-    final TextEditingController addressController = TextEditingController(text: debtor['address']?.toString() ?? '');
+  void _showEditDebtorDialog(
+      BuildContext context, Map<String, dynamic> debtor) {
+    final TextEditingController balanceController =
+        TextEditingController(text: debtor['balance']?.toString() ?? '0.00');
+    final TextEditingController emailController =
+        TextEditingController(text: debtor['email']?.toString() ?? '');
+    final TextEditingController phoneController =
+        TextEditingController(text: debtor['phone']?.toString() ?? '');
+    final TextEditingController addressController =
+        TextEditingController(text: debtor['address']?.toString() ?? '');
     String? errorMessage;
 
     showDialog(
@@ -195,7 +204,8 @@ class DebtorsScreen extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () async {
-                    final balance = double.tryParse(balanceController.text.trim());
+                    final balance =
+                        double.tryParse(balanceController.text.trim());
                     final email = emailController.text.trim();
                     final phone = phoneController.text.trim();
                     final address = addressController.text.trim();
@@ -208,7 +218,8 @@ class DebtorsScreen extends StatelessWidget {
                     }
 
                     try {
-                      await Provider.of<DebtorsProvider>(context, listen: false).updateDebtor(
+                      await Provider.of<DebtorsProvider>(context, listen: false)
+                          .updateDebtor(
                         debtor['id'] as int,
                         balance,
                         email: email.isNotEmpty ? email : null,
@@ -217,11 +228,13 @@ class DebtorsScreen extends StatelessWidget {
                       );
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Debtor updated successfully')),
+                        const SnackBar(
+                            content: Text('Debtor updated successfully')),
                       );
                     } catch (e) {
                       setState(() {
-                        errorMessage = e.toString().replaceFirst('Exception: ', '');
+                        errorMessage =
+                            e.toString().replaceFirst('Exception: ', '');
                       });
                     }
                   },
@@ -235,7 +248,8 @@ class DebtorsScreen extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, String debtorName, int id) {
+  void _showDeleteConfirmationDialog(
+      BuildContext context, String debtorName, int id) {
     showDialog(
       context: context,
       builder: (context) {
@@ -250,14 +264,18 @@ class DebtorsScreen extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 try {
-                  await Provider.of<DebtorsProvider>(context, listen: false).deleteDebtor(id);
+                  await Provider.of<DebtorsProvider>(context, listen: false)
+                      .deleteDebtor(id);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Debtor deleted successfully')),
+                    const SnackBar(
+                        content: Text('Debtor deleted successfully')),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete debtor: ${e.toString().replaceFirst('Exception: ', '')}')),
+                    SnackBar(
+                        content: Text(
+                            'Failed to delete debtor: ${e.toString().replaceFirst('Exception: ', '')}')),
                   );
                 }
               },
@@ -304,63 +322,78 @@ class DebtorsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               debtorsProvider.debtors.isEmpty
                   ? const Center(
-                child: Text(
-                  'No debtors recorded yet. Add a debtor to get started!',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              )
+                      child: Text(
+                        'No debtors recorded yet. Add a debtor to get started!',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    )
                   : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: debtorsProvider.debtors.length,
-                itemBuilder: (context, index) {
-                  final debtor = debtorsProvider.debtors[index];
-                  final balanceStr = debtor['balance']?.toString() ?? '0.00';
-                  final balance = double.tryParse(balanceStr) ?? 0.0; // Convert String to num
-                  return Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        debtor['name']?.toString() ?? 'Unknown',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Balance: Tsh ${balance.toStringAsFixed(2)}'),
-                          if (debtor['email'] != null) Text('Email: ${debtor['email']}'),
-                          if (debtor['phone'] != null) Text('Phone: ${debtor['phone']}'),
-                          if (debtor['address'] != null) Text('Address: ${debtor['address']}'),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Tsh${balance.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Color(0xFF26A69A),
-                              fontWeight: FontWeight.bold,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: debtorsProvider.debtors.length,
+                      itemBuilder: (context, index) {
+                        final debtor = debtorsProvider.debtors[index];
+                        final balanceStr =
+                            debtor['balance']?.toString() ?? '0.00';
+                        final balance = double.tryParse(balanceStr) ??
+                            0.0; // Convert String to num
+                        return Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            title: Text(
+                              debtor['name']?.toString() ?? 'Unknown',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    'Balance: Tsh ${balance.toStringAsFixed(2)}'),
+                                if (debtor['email'] != null)
+                                  Text('Email: ${debtor['email']}'),
+                                if (debtor['phone'] != null)
+                                  Text('Phone: ${debtor['phone']}'),
+                                if (debtor['address'] != null)
+                                  Text('Address: ${debtor['address']}'),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Tsh${balance.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF26A69A),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue),
+                                  onPressed: () =>
+                                      _showEditDebtorDialog(context, debtor),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () =>
+                                      _showDeleteConfirmationDialog(
+                                          context,
+                                          debtor['name']?.toString() ??
+                                              'Unknown',
+                                          debtor['id'] as int),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showEditDebtorDialog(context, debtor),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _showDeleteConfirmationDialog(context, debtor['name']?.toString() ?? 'Unknown', debtor['id'] as int),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ],
           ),
         ),

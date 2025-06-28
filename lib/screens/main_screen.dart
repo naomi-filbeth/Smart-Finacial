@@ -24,19 +24,19 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   List<Widget> get _screens => [
-    const HomeScreen(),
-    AddSaleScreen(
-      onSaleRecorded: () {
-        setState(() {
-          _selectedIndex = 0;
-        });
-      },
-    ),
-    const InventoryScreen(),
-    const InsightsScreen(),
-    const ProfitLossScreen(),
-    const DebtorsScreen(),
-  ];
+        const HomeScreen(),
+        AddSaleScreen(
+          onSaleRecorded: () {
+            setState(() {
+              _selectedIndex = 0;
+            });
+          },
+        ),
+        const InventoryScreen(),
+        const InsightsScreen(),
+        const ProfitLossScreen(),
+        const DebtorsScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
