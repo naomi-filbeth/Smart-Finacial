@@ -6,131 +6,16 @@ class InventoryScreen extends StatelessWidget {
   const InventoryScreen({super.key});
 
   void _showAddProductDialog(BuildContext context) {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
-    final costController = TextEditingController();
-    final stockController = TextEditingController();
-    String localErrorMessage = '';
-
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setState) => AlertDialog(
-          title: const Text('Add New Product'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Product Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: priceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Selling Price (Tsh)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: costController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Cost Price (Tsh)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: stockController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Initial Stock',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                if (localErrorMessage.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      localErrorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  ),
-                Selector<SalesProvider, String>(
-                  selector: (_, provider) => provider.errorMessage,
-                  builder: (_, errorMessage, __) => errorMessage.isNotEmpty
-                      ? Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            Selector<SalesProvider, bool>(
-              selector: (_, provider) => provider.isLoading,
-              builder: (_, isLoading, __) => TextButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                  final name = nameController.text.trim();
-                  final price = double.tryParse(priceController.text.trim());
-                  final cost = double.tryParse(costController.text.trim());
-                  final stock = int.tryParse(stockController.text.trim());
-
-                  if (name.isEmpty || price == null || cost == null || stock == null || price <= 0 || cost <= 0 || stock < 0) {
-                    setState(() {
-                      localErrorMessage = 'Please fill in all fields with valid values.';
-                    });
-                    return;
-                  }
-
-                  try {
-                    await Provider.of<SalesProvider>(context, listen: false).addProduct(context, name, price, cost, stock);
-                    Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Product added successfully')),
-                    );
-                  } catch (e) {
-                    setState(() {
-                      localErrorMessage = e.toString().replaceFirst('Exception: ', '');
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to add product: $localErrorMessage')),
-                    );
-                    if (e.toString().contains('Session expired')) {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    }
-                  }
-                },
-                child: const Text('Add'),
-              ),
-            ),
-          ],
-        ),
+      builder: (dialogContext) => AddProductDialog(
+        onProductAdded: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product added successfully')),
+          );
+        },
       ),
-    ).whenComplete(() {
-      nameController.dispose();
-      priceController.dispose();
-      costController.dispose();
-      stockController.dispose();
-    });
+    );
   }
 
   void _showDeleteConfirmationDialog(BuildContext context, String productName) {
@@ -285,6 +170,152 @@ class InventoryScreen extends StatelessWidget {
           child: const Icon(Icons.add),
         ),
       ),
+    );
+  }
+}
+
+class AddProductDialog extends StatefulWidget {
+  final VoidCallback onProductAdded;
+
+  const AddProductDialog({super.key, required this.onProductAdded});
+
+  @override
+  State<AddProductDialog> createState() => _AddProductDialogState();
+}
+
+class _AddProductDialogState extends State<AddProductDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _stockController = TextEditingController();
+  String _localErrorMessage = '';
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _costController.dispose();
+    _stockController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addProduct(BuildContext parentContext) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _localErrorMessage = '';
+    });
+
+    final name = _nameController.text.trim();
+    final price = double.tryParse(_priceController.text.trim());
+    final cost = double.tryParse(_costController.text.trim());
+    final stock = int.tryParse(_stockController.text.trim());
+
+    if (name.isEmpty || price == null || cost == null || stock == null || price <= 0 || cost <= 0 || stock < 0) {
+      setState(() {
+        _isLoading = false;
+        _localErrorMessage = 'Please fill in all fields with valid values.';
+      });
+      return;
+    }
+
+    try {
+      await Provider.of<SalesProvider>(parentContext, listen: false).addProduct(parentContext, name, price, cost, stock);
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onProductAdded();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _localErrorMessage = e.toString().replaceFirst('Exception: ', '');
+        });
+        if (e.toString().contains('Session expired')) {
+          Navigator.pushReplacementNamed(parentContext, '/login');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add New Product'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Product Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Selling Price (Tsh)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _costController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Cost Price (Tsh)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _stockController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Initial Stock',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_localErrorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _localErrorMessage,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
+            Selector<SalesProvider, String>(
+              selector: (_, provider) => provider.errorMessage,
+              builder: (_, errorMessage, __) => errorMessage.isNotEmpty
+                  ? Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _isLoading ? null : () => _addProduct(context),
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : const Text('Add'),
+        ),
+      ],
     );
   }
 }
