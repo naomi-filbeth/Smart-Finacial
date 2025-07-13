@@ -1,296 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/debtors_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/debtors_bloc.dart';
+import '../bloc/debtors_event.dart';
+import '../bloc/debtors_state.dart';
 
 class DebtorsScreen extends StatelessWidget {
   const DebtorsScreen({super.key});
 
   void _showAddDebtorDialog(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController balanceController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController phoneController = TextEditingController();
-    final TextEditingController addressController = TextEditingController();
-    String? errorMessage;
-
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Add New Debtor'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Debtor Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: balanceController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Balance Owed',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: addressController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Address (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    if (errorMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    final balance =
-                        double.tryParse(balanceController.text.trim());
-                    final email = emailController.text.trim();
-                    final phone = phoneController.text.trim();
-                    final address = addressController.text.trim();
-
-                    if (name.isEmpty || balance == null || balance <= 0) {
-                      setState(() {
-                        errorMessage = 'Please fill in name and valid balance.';
-                      });
-                      return;
-                    }
-
-                    try {
-                      await Provider.of<DebtorsProvider>(context, listen: false)
-                          .addDebtor(
-                        name,
-                        balance,
-                        email: email.isNotEmpty ? email : null,
-                        phone: phone.isNotEmpty ? phone : null,
-                        address: address.isNotEmpty ? address : null,
-                      );
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Debtor added successfully')),
-                      );
-                    } catch (e) {
-                      setState(() {
-                        errorMessage =
-                            e.toString().replaceFirst('Exception: ', '');
-                      });
-                    }
-                  },
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (dialogContext) => AddDebtorDialog(
+        onDebtorAdded: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Debtor added successfully')),
+          );
+        },
+      ),
     );
   }
 
-  void _showEditDebtorDialog(
-      BuildContext context, Map<String, dynamic> debtor) {
-    final TextEditingController balanceController =
-        TextEditingController(text: debtor['balance']?.toString() ?? '0.00');
-    final TextEditingController emailController =
-        TextEditingController(text: debtor['email']?.toString() ?? '');
-    final TextEditingController phoneController =
-        TextEditingController(text: debtor['phone']?.toString() ?? '');
-    final TextEditingController addressController =
-        TextEditingController(text: debtor['address']?.toString() ?? '');
-    String? errorMessage;
-
+  void _showUpdateDebtorDialog(BuildContext context, Map<String, dynamic> debtor) {
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Edit Debtor: ${debtor['name']}'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: balanceController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Balance Owed',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: addressController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Address (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    if (errorMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final balance =
-                        double.tryParse(balanceController.text.trim());
-                    final email = emailController.text.trim();
-                    final phone = phoneController.text.trim();
-                    final address = addressController.text.trim();
-
-                    if (balance == null || balance <= 0) {
-                      setState(() {
-                        errorMessage = 'Please provide a valid balance.';
-                      });
-                      return;
-                    }
-
-                    try {
-                      await Provider.of<DebtorsProvider>(context, listen: false)
-                          .updateDebtor(
-                        debtor['id'] as int,
-                        balance,
-                        email: email.isNotEmpty ? email : null,
-                        phone: phone.isNotEmpty ? phone : null,
-                        address: address.isNotEmpty ? address : null,
-                      );
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Debtor updated successfully')),
-                      );
-                    } catch (e) {
-                      setState(() {
-                        errorMessage =
-                            e.toString().replaceFirst('Exception: ', '');
-                      });
-                    }
-                  },
-                  child: const Text('Update'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (dialogContext) => UpdateDebtorDialog(
+        debtor: debtor,
+        onDebtorUpdated: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Debtor updated successfully')),
+          );
+        },
+      ),
     );
   }
 
-  void _showDeleteConfirmationDialog(
-      BuildContext context, String debtorName, int id) {
+  void _showDeleteConfirmationDialog(BuildContext context, int id, String name) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Debtor'),
-          content: Text('Are you sure you want to delete "$debtorName"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await Provider.of<DebtorsProvider>(context, listen: false)
-                      .deleteDebtor(id);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Debtor deleted successfully')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            'Failed to delete debtor: ${e.toString().replaceFirst('Exception: ', '')}')),
-                  );
-                }
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Debtor'),
+        content: Text('Are you sure you want to delete "$name"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          BlocBuilder<DebtorsBloc, DebtorsState>(
+            builder: (context, state) => TextButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () {
+                context.read<DebtorsBloc>().add(DeleteDebtor(id: id));
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Debtor deleted successfully')),
+                );
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final debtorsProvider = Provider.of<DebtorsProvider>(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFF26A69A),
       appBar: AppBar(
@@ -305,104 +80,384 @@ class DebtorsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Debtor List',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              debtorsProvider.debtors.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No debtors recorded yet. Add a debtor to get started!',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: debtorsProvider.debtors.length,
-                      itemBuilder: (context, index) {
-                        final debtor = debtorsProvider.debtors[index];
-                        final balanceStr =
-                            debtor['balance']?.toString() ?? '0.00';
-                        final balance = double.tryParse(balanceStr) ??
-                            0.0; // Convert String to num
-                        return Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ListTile(
-                            title: Text(
-                              debtor['name']?.toString() ?? 'Unknown',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                    'Balance: Tsh ${balance.toStringAsFixed(2)}'),
-                                if (debtor['email'] != null)
-                                  Text('Email: ${debtor['email']}'),
-                                if (debtor['phone'] != null)
-                                  Text('Phone: ${debtor['phone']}'),
-                                if (debtor['address'] != null)
-                                  Text('Address: ${debtor['address']}'),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Tsh${balance.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF26A69A),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.blue),
-                                  onPressed: () =>
-                                      _showEditDebtorDialog(context, debtor),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.red),
-                                  onPressed: () =>
-                                      _showDeleteConfirmationDialog(
-                                          context,
-                                          debtor['name']?.toString() ??
-                                              'Unknown',
-                                          debtor['id'] as int),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+      body: BlocBuilder<DebtorsBloc, DebtorsState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Debtor List',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-            ],
-          ),
+                  ),
+                  const SizedBox(height: 8),
+                  state.debtors.isEmpty
+                      ? const Center(
+                    child: Text(
+                      'No debtors recorded yet. Add a debtor to get started!',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  )
+                      : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: state.debtors.length,
+                    itemBuilder: (context, index) {
+                      final debtor = state.debtors[index];
+                      return Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListTile(
+                          title: Text(
+                            debtor['name'],
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text('Balance: Tsh${debtor['balance'].toStringAsFixed(2)}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: state.isLoading
+                                    ? null
+                                    : () => _showUpdateDebtorDialog(context, debtor),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: state.isLoading
+                                    ? null
+                                    : () => _showDeleteConfirmationDialog(
+                                    context, debtor['id'], debtor['name']),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (state.errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(
+                        state.errorMessage,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      floatingActionButton: BlocBuilder<DebtorsBloc, DebtorsState>(
+        builder: (context, state) => FloatingActionButton(
+          onPressed: state.isLoading ? null : () => _showAddDebtorDialog(context),
+          backgroundColor: const Color(0xFF26A69A),
+          child: const Icon(Icons.add),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddDebtorDialog(context),
-        backgroundColor: const Color(0xFF26A69A),
-        child: const Icon(Icons.add),
+    );
+  }
+}
+
+class AddDebtorDialog extends StatefulWidget {
+  final VoidCallback onDebtorAdded;
+
+  const AddDebtorDialog({super.key, required this.onDebtorAdded});
+
+  @override
+  _AddDebtorDialogState createState() => _AddDebtorDialogState();
+}
+
+class _AddDebtorDialogState extends State<AddDebtorDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _balanceController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _productController = TextEditingController();
+  String _localErrorMessage = '';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _balanceController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _productController.dispose();
+    super.dispose();
+  }
+
+  void _addDebtor(BuildContext context) {
+    final name = _nameController.text.trim();
+    final balance = double.tryParse(_balanceController.text.trim());
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final product = _productController.text.trim();
+
+    if (name.isEmpty || balance == null || balance < 0) {
+      setState(() {
+        _localErrorMessage = 'Please fill in name and a valid balance.';
+      });
+      return;
+    }
+
+    context.read<DebtorsBloc>().add(AddDebtor(
+      name: name,
+      balance: balance,
+      email: email.isNotEmpty ? email : null,
+      phone: phone,
+      product: product,
+    ));
+
+    Navigator.pop(context);
+    widget.onDebtorAdded();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add New Debtor'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _balanceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Balance (Tsh)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _productController,
+              decoration: const InputDecoration(
+                labelText: 'Product',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_localErrorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _localErrorMessage,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
+            BlocBuilder<DebtorsBloc, DebtorsState>(
+              builder: (context, state) {
+                if (state.errorMessage.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      state.errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        BlocBuilder<DebtorsBloc, DebtorsState>(
+          builder: (context, state) => TextButton(
+            onPressed: state.isLoading ? null : () => _addDebtor(context),
+            child: state.isLoading
+                ? const CircularProgressIndicator()
+                : const Text('Add'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class UpdateDebtorDialog extends StatefulWidget {
+  final Map<String, dynamic> debtor;
+  final VoidCallback onDebtorUpdated;
+
+  const UpdateDebtorDialog({super.key, required this.debtor, required this.onDebtorUpdated});
+
+  @override
+  _UpdateDebtorDialogState createState() => _UpdateDebtorDialogState();
+}
+
+class _UpdateDebtorDialogState extends State<UpdateDebtorDialog> {
+  final TextEditingController _balanceController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _productController = TextEditingController();
+  String _localErrorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _balanceController.text = widget.debtor['balance'].toString();
+    _emailController.text = widget.debtor['email']?.toString() ?? '';
+    _phoneController.text = widget.debtor['phone']?.toString() ?? '';
+    _productController.text = widget.debtor['product']?.toString() ?? '';
+  }
+
+  @override
+  void dispose() {
+    _balanceController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _productController.dispose();
+    super.dispose();
+  }
+
+  void _updateDebtor(BuildContext context) {
+    final balance = double.tryParse(_balanceController.text.trim());
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final product = _productController.text.trim();
+
+    if (balance == null || balance < 0) {
+      setState(() {
+        _localErrorMessage = 'Please enter a valid balance.';
+      });
+      return;
+    }
+
+    context.read<DebtorsBloc>().add(UpdateDebtor(
+      id: widget.debtor['id'],
+      balance: balance,
+      email: email.isNotEmpty ? email : null,
+      phone: phone,
+      product: product,
+    ));
+
+    Navigator.pop(context);
+    widget.onDebtorUpdated();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Update Debtor: ${widget.debtor['name']}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _balanceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Balance (Tsh)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _productController,
+              decoration: const InputDecoration(
+                labelText: 'Product',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_localErrorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _localErrorMessage,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
+            BlocBuilder<DebtorsBloc, DebtorsState>(
+              builder: (context, state) {
+                if (state.errorMessage.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      state.errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        BlocBuilder<DebtorsBloc, DebtorsState>(
+          builder: (context, state) => TextButton(
+            onPressed: state.isLoading ? null : () => _updateDebtor(context),
+            child: state.isLoading
+                ? const CircularProgressIndicator()
+                : const Text('Update'),
+          ),
+        ),
+      ],
     );
   }
 }

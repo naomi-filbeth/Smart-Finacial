@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,9 +20,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _initializeApp() async {
     print('Initializing app...');
     await Future.delayed(const Duration(seconds: 2)); // Simulate loading
-    print('Navigation to login screen');
+    print('Triggering authentication check');
+    context.read<AuthBloc>().add(CheckAuthentication());
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/check-auth');
     }
   }
 
