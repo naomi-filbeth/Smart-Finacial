@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class SalesList extends StatelessWidget {
   final List<Map<String, dynamic>> sales;
@@ -7,6 +8,7 @@ class SalesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -20,10 +22,10 @@ class SalesList extends StatelessWidget {
           ),
           child: ListTile(
             title: Text(
-              '${sale['product']} (x${sale['quantity']})',
+              '${sale['product_name']} (x${sale['quantity']})',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('Date: ${sale['date']}'),
+            subtitle: Text('Date: ${dateFormat.format(sale['date'])}'),
             trailing: Text(
               'Tsh${(sale['quantity'] * sale['price']).toStringAsFixed(2)}',
               style: const TextStyle(color: Color(0xFF26A69A)),

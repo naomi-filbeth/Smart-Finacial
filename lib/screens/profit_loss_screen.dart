@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../bloc/sales_bloc.dart';
 import '../bloc/sales_state.dart';
 
@@ -8,6 +9,7 @@ class ProfitLossScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
     return Scaffold(
       backgroundColor: const Color(0xFF26A69A),
       appBar: AppBar(
@@ -143,10 +145,10 @@ class ProfitLossScreen extends StatelessWidget {
                         ),
                         child: ListTile(
                           title: Text(
-                            '${sale['product']} (x${sale['quantity']})',
+                            '${sale['product_name']} (x${sale['quantity']})',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text('Date: ${sale['date']}'),
+                          subtitle: Text('Date: ${dateFormat.format(sale['date'])}'),
                           trailing: Text(
                             'Profit: Tsh${profit.toStringAsFixed(2)}',
                             style: TextStyle(

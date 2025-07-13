@@ -79,27 +79,6 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
         final productsData = jsonDecode(productsResponse.body) as List;
         final topSellingData = jsonDecode(topSellingResponse.body) as List;
 
-        final sales = salesData.map((item) {
-          final mappedItem = Map<String, dynamic>.from(item);
-          if (kDebugMode) {
-            print('Processing sale: $mappedItem');
-          }
-          mappedItem['price'] = (mappedItem['price'] is String
-              ? double.tryParse(mappedItem['price'])
-              : mappedItem['price'] as num?)?.toDouble() ?? 0.0;
-          mappedItem['cost'] = (mappedItem['cost'] is String
-              ? double.tryParse(mappedItem['cost'])
-              : mappedItem['cost'] as num?)?.toDouble() ?? 0.0;
-          mappedItem['quantity'] = (mappedItem['quantity'] is String
-              ? int.tryParse(mappedItem['quantity'])
-              : mappedItem['quantity'] as num?)?.toInt() ?? 0;
-          mappedItem['product_id'] = (mappedItem['product'] is String
-              ? int.tryParse(mappedItem['product'])
-              : mappedItem['product'] as num?)?.toInt() ?? 0;
-          mappedItem['date'] = DateTime.tryParse(mappedItem['date'] as String? ?? '') ?? DateTime.now();
-          return mappedItem;
-        }).toList();
-
         final products = productsData.map((item) {
           final mappedItem = Map<String, dynamic>.from(item);
           if (kDebugMode) {
@@ -120,6 +99,33 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
           return mappedItem;
         }).toList();
 
+        final sales = salesData.map((item) {
+          final mappedItem = Map<String, dynamic>.from(item);
+          if (kDebugMode) {
+            print('Processing sale: $mappedItem');
+          }
+          mappedItem['price'] = (mappedItem['price'] is String
+              ? double.tryParse(mappedItem['price'])
+              : mappedItem['price'] as num?)?.toDouble() ?? 0.0;
+          mappedItem['cost'] = (mappedItem['cost'] is String
+              ? double.tryParse(mappedItem['cost'])
+              : mappedItem['cost'] as num?)?.toDouble() ?? 0.0;
+          mappedItem['quantity'] = (mappedItem['quantity'] is String
+              ? int.tryParse(mappedItem['quantity'])
+              : mappedItem['quantity'] as num?)?.toInt() ?? 0;
+          mappedItem['product_id'] = (mappedItem['product'] is String
+              ? int.tryParse(mappedItem['product'])
+              : mappedItem['product'] as num?)?.toInt() ?? 0;
+          mappedItem['date'] = DateTime.tryParse(mappedItem['date'] as String? ?? '') ?? DateTime.now();
+          // Map product name
+          final product = products.firstWhere(
+                (p) => p['id'] == mappedItem['product_id'],
+            orElse: () => {'name': 'Unknown Product'},
+          );
+          mappedItem['product_name'] = product['name'];
+          return mappedItem;
+        }).toList();
+
         final topSellingProducts = topSellingData.map((item) {
           final mappedItem = Map<String, dynamic>.from(item);
           if (kDebugMode) {
@@ -128,6 +134,7 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
           mappedItem['quantity'] = (mappedItem['quantity'] is String
               ? int.tryParse(mappedItem['quantity'])
               : mappedItem['quantity'] as num?)?.toInt() ?? 0;
+          mappedItem['name'] = mappedItem['name']?.toString() ?? 'Unknown';
           return mappedItem;
         }).toList();
 
@@ -201,6 +208,12 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
             ? int.tryParse(newSale['product'])
             : newSale['product'] as num?)?.toInt() ?? event.productId;
         newSale['date'] = DateTime.tryParse(newSale['date'] as String? ?? '') ?? event.date;
+        // Map product name
+        final product = state.products.firstWhere(
+              (p) => p['id'] == newSale['product_id'],
+          orElse: () => {'name': 'Unknown Product'},
+        );
+        newSale['product_name'] = product['name'];
 
         final updatedSales = [...state.sales, newSale];
         final totalSales = updatedSales.fold<double>(
@@ -212,9 +225,7 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
         final updatedProducts = state.products.map((product) {
           if (product['id'] == event.productId) {
             final updatedProduct = Map<String, dynamic>.from(product);
-            updatedProduct['stock'] = (product['stock'] is String
-                ? int.tryParse(product['stock'])
-                : product['stock'] as num?)?.toInt() ?? 0 - event.quantity;
+            updatedProduct['stock'] = (product['stock'] as int) - event.quantity;
             return updatedProduct;
           }
           return product;
@@ -222,7 +233,7 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
 
         final topSellingProducts = state.topSellingProducts.map((item) {
           final mappedItem = Map<String, dynamic>.from(item);
-          if (mappedItem['name'] == updatedProducts.firstWhere((p) => p['id'] == event.productId)['name']) {
+          if (mappedItem['name'] == product['name']) {
             mappedItem['quantity'] = (mappedItem['quantity'] as int) + event.quantity;
           }
           return mappedItem;
@@ -393,8 +404,12 @@ class SalesBloc extends Bloc<SalesEvent, SalesState> {
         emit(state.copyWith(isLoading: false, products: updatedProducts));
       } else if (response.statusCode == 401) {
         throw Exception('Session expired.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Product not found or does not belong to this user.');
+      } else if (response.statusCode == 403) {
+        throw Exception('Cannot delete product with associated sales.');
       } else {
-        throw Exception('Failed to delete product: ${response.statusCode}');
+        throw Exception('Failed to delete product: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       emit(state.copyWith(

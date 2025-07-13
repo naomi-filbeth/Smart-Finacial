@@ -103,7 +103,7 @@ class InsightsScreen extends StatelessWidget {
                             product['name'],
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text('Quantity Sold: ${product['quantity_sold']}'),
+                          subtitle: Text('Quantity Sold: ${product['quantity']}'),
                         ),
                       );
                     },
